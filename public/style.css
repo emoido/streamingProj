@@ -1,4 +1,4 @@
-/* Radio Calico — styling per the brand & UI style guide. */
+/* WaveHub — styling per the brand & UI style guide. */
 :root {
   --mint: #d8f2d5;
   --forest: #1f4e23;
@@ -75,7 +75,8 @@ body {
 .brand-logo {
   width: 38px;
   height: 38px;
-  border-radius: 50%;
+  border-radius: 22%;
+  object-fit: cover;
   filter: drop-shadow(0 2px 4px rgba(35, 31, 32, 0.3));
   transition: transform 0.2s ease;
 }

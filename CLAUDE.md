@@ -66,7 +66,7 @@ curl localhost:3000/api/tracks
   `/api/tracks` and station metadata client-side); `tv.html` + `tv.js` is the
   live-TV player — it fetches the channel list from `/api/tv`, renders a channel
   switcher, and plays the selected channel (hls.js video via the
-  `/api/tv/<id>/` proxy). `logo.svg` is the custom logo; `style.css` is shared.
+  `/api/tv/<id>/` proxy). `WaveHubLogo.png` is the brand logo; `style.css` is shared.
 
 ## Conventions
 

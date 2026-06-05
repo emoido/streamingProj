@@ -1,4 +1,4 @@
-# Radio Calico
+# WaveHub
 
 A local prototype web stack: an Express server serving a static front-end with
 a **lossless radio** player and a **live TV** player (TRT 1, Bloomberg HT,

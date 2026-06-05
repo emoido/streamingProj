@@ -1,4 +1,4 @@
-// Radio Calico — local prototype web server.
+// WaveHub — local prototype web server.
 // Serves a static front-end from /public and a small JSON API backed by SQLite.
 import express from 'express';
 import { fileURLToPath } from 'node:url';
@@ -127,5 +127,5 @@ app.use('/api/tv/:channel', tvProxy);
 app.use(express.static(join(__dirname, 'public')));
 
 app.listen(PORT, () => {
-  console.log(`Radio Calico prototype running at http://localhost:${PORT}`);
+  console.log(`WaveHub prototype running at http://localhost:${PORT}`);
 });

@@ -1,4 +1,4 @@
-// Radio Calico — TV player. Channels are fetched from /api/tv and streamed
+// WaveHub — TV player. Channels are fetched from /api/tv and streamed
 // through our own server proxy at /api/tv/<id>/<manifest>, so playback is
 // consistent regardless of each CDN's CORS/edge behaviour. When the server is
 // hosted in-region, the proxy is also what makes a channel reachable from

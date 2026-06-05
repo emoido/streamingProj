@@ -1,4 +1,4 @@
-// Radio Calico player: HLS playback + live now-playing metadata + ratings.
+// WaveHub player: HLS playback + live now-playing metadata + ratings.
 const STREAM_URL = 'https://d3d4yli4hf5bmh.cloudfront.net/hls/live.m3u8';
 const META_URL = 'https://d3d4yli4hf5bmh.cloudfront.net/metadatav2.json';
 const COVER_URL = 'https://d3d4yli4hf5bmh.cloudfront.net/cover.jpg';
