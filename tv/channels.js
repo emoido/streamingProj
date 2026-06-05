@@ -1,13 +1,18 @@
 // Live TV channel registry — the single source of truth shared by the HLS
 // proxy (tv/proxy.js) and the channel-list API (server.js).
 //
-// Each channel has:
-//   name      - human label shown in the UI
-//   upstream  - origin base URL of the channel's HLS CDN (no trailing path)
-//   manifest  - master playlist filename relative to `upstream`
-//
-// Every upstream is overridable via env so deployments can point a channel at
-// an authorised source without code changes (same pattern as TRT1_UPSTREAM).
+// Each channel resolves from env (prefix = the channel id upper-cased, e.g.
+// `ssport` -> SSPORT_*). Fields:
+//   upstream   - <ID>_UPSTREAM  origin base URL of the channel's HLS CDN
+//   manifest   - <ID>_MANIFEST  master playlist path relative to `upstream`
+//                               (default master.m3u8; may be a deep path)
+//   referer    - <ID>_REFERER   sent as the Referer request header upstream
+//   origin     - <ID>_ORIGIN    sent as the Origin request header upstream
+//   allowHosts - <ID>_HOSTS     comma-separated extra hostnames the proxy may
+//                               fetch from (for segments on a different CDN)
+//   rewrite    - <ID>_REWRITE   rewrite manifest bodies so child URIs route
+//                               back through the proxy (auto-on when allowHosts
+//                               is set; needed for absolute / cross-host URLs)
 //
 // NOTE ON THE S SPORT CHANNELS: unlike TRT 1 (free-to-air public broadcaster),
 // S Sport / S Sport 2 / S Sport+ are Saran Media's *subscription* channels.
@@ -15,32 +20,49 @@
 // are wired in here but default to an empty upstream (`ready: false`), so the
 // UI shows them as "needs configuration" until you supply a legitimate endpoint
 // you're authorised to use, e.g.  SSPORT_UPSTREAM=https://… npm start
+const TRUTHY = new Set(['1', 'true', 'yes', 'on']);
+
+function channel(id, name, defaults = {}) {
+  const P = id.toUpperCase();
+  const e = process.env;
+  const allowHosts = (e[`${P}_HOSTS`] ?? '')
+    .split(',')
+    .map((h) => h.trim())
+    .filter(Boolean);
+  return {
+    name,
+    upstream: e[`${P}_UPSTREAM`] ?? defaults.upstream ?? '',
+    manifest: e[`${P}_MANIFEST`] ?? defaults.manifest ?? 'master.m3u8',
+    referer: e[`${P}_REFERER`] ?? defaults.referer ?? '',
+    origin: e[`${P}_ORIGIN`] ?? defaults.origin ?? '',
+    allowHosts,
+    rewrite:
+      TRUTHY.has((e[`${P}_REWRITE`] ?? '').toLowerCase()) || allowHosts.length > 0,
+  };
+}
+
 export const CHANNELS = {
-  trt1: {
-    name: 'TRT 1',
-    upstream: process.env.TRT1_UPSTREAM ?? 'https://tv-trt1.medya.trt.com.tr',
-    manifest: process.env.TRT1_MANIFEST ?? 'master.m3u8',
-  },
-  ssport: {
-    name: 'S Sport',
-    upstream: process.env.SSPORT_UPSTREAM ?? '',
-    manifest: process.env.SSPORT_MANIFEST ?? 'master.m3u8',
-  },
-  ssport2: {
-    name: 'S Sport 2',
-    upstream: process.env.SSPORT2_UPSTREAM ?? '',
-    manifest: process.env.SSPORT2_MANIFEST ?? 'master.m3u8',
-  },
-  ssportplus: {
-    name: 'S Sport+',
-    upstream: process.env.SSPORTPLUS_UPSTREAM ?? '',
-    manifest: process.env.SSPORTPLUS_MANIFEST ?? 'master.m3u8',
-  },
+  trt1: channel('trt1', 'TRT 1', { upstream: 'https://tv-trt1.medya.trt.com.tr' }),
+  ssport: channel('ssport', 'S Sport'),
+  ssport2: channel('ssport2', 'S Sport 2'),
+  ssportplus: channel('ssportplus', 'S Sport+'),
 };
+
+// Origins the proxy may fetch from for a channel: its upstream origin plus any
+// configured extra hosts. Used for the SSRF host check, redirect following, and
+// deciding which manifest URIs to route back through the proxy.
+export function allowedOrigins(ch) {
+  const set = new Set();
+  if (ch.upstream) set.add(new URL(ch.upstream).origin);
+  for (const h of ch.allowHosts) {
+    set.add(h.includes('://') ? new URL(h).origin : `https://${h}`);
+  }
+  return set;
+}
 
 // Public, front-end-safe view of the registry: ids, labels, the proxied
 // manifest URL, and whether the channel has an upstream configured. Upstream
-// hosts are intentionally NOT exposed.
+// hosts and per-channel headers are intentionally NOT exposed.
 export function channelList() {
   return Object.entries(CHANNELS).map(([id, c]) => ({
     id,

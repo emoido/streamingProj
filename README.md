@@ -69,10 +69,47 @@ SSPORTPLUS_UPSTREAM=https://<host>  \
   npm start
 ```
 
-Each also takes an optional `*_MANIFEST` var (default `master.m3u8`) if the
-master playlist has a different filename. The same geo-restriction reality
-applies: only an in-region (and, for these, authorised) source will actually
-play.
+The same geo-restriction reality applies: only an in-region (and, for these,
+authorised) source will actually play.
+
+#### Per-channel tuning (env)
+
+Real broadcaster streams (Brightcove/Akamai etc.) often need more than a bare
+URL. Every channel reads these, prefixed by its id upper-cased (`SSPORT_*`,
+`SSPORT2_*`, `TRT1_*`, …):
+
+| Var            | Purpose                                                                 |
+| -------------- | ----------------------------------------------------------------------- |
+| `*_UPSTREAM`   | Origin base URL of the channel's HLS CDN.                               |
+| `*_MANIFEST`   | Master playlist path relative to upstream (default `master.m3u8`; may be a deep path). |
+| `*_REFERER`    | Sent as the `Referer` request header upstream (many CDNs gate on it).  |
+| `*_ORIGIN`     | Sent as the `Origin` request header upstream.                          |
+| `*_HOSTS`      | Comma-separated **extra** hostnames the proxy may fetch from — for segments served by a different CDN host than the manifest. |
+| `*_REWRITE`    | `1` to rewrite manifest bodies so child URIs route back through the proxy. Needed when a stream uses **absolute** or **cross-host** URLs. Auto-on whenever `*_HOSTS` is set. |
+
+Example for a tokenised, multi-host stream:
+
+```bash
+SSPORT_UPSTREAM=https://cdn-a.example.com \
+SSPORT_MANIFEST=live/eventid/master.m3u8 \
+SSPORT_REFERER=https://www.ssport.example/ \
+SSPORT_HOSTS=seg-b.example.com,key-c.example.com \
+  npm start
+```
+
+How the proxy handles manifests:
+
+- **Default (path-preserving):** child URIs are relative, so the body is
+  streamed untouched and the browser resolves children back through the proxy.
+  This is what TRT 1 uses.
+- **Rewriting (`*_REWRITE`/`*_HOSTS`):** the manifest is buffered and every
+  child URI is resolved and, if its origin is allowlisted (`*_UPSTREAM` +
+  `*_HOSTS`), rewritten to flow back through this proxy. Non-allowlisted hosts
+  are left as direct links (never proxied — SSRF guard). Tokens carried in the
+  child URLs are preserved.
+
+Still out of scope: **DRM** (Widevine/FairPlay). If the stream is
+license-encrypted rather than just token-gated, this proxy won't decrypt it.
 
 ## Quick checks
 

@@ -32,20 +32,26 @@ curl localhost:3000/api/tracks
   (defined inline via an `express.Router`), the live-TV proxy under
   `/api/tv/:channel`, and serves `public/` as static files. Calls `migrate()`
   on startup. Port comes from `PORT` (default 3000).
-- **`tv/channels.js`** — the channel registry (single source of truth). Maps
-  channel id → `{ name, upstream, manifest }`, every field env-overridable
-  (`TRT1_UPSTREAM`, `SSPORT_UPSTREAM`, `SSPORT2_UPSTREAM`, `SSPORTPLUS_UPSTREAM`,
-  plus `*_MANIFEST`). `channelList()` exposes a browser-safe view (id, label,
-  proxied manifest URL, `ready` flag) — upstream hosts are never sent to the
-  client. TRT 1 is free-to-air and ships with a working default; the S Sport
-  channels are subscription/DRM-gated and default to an empty upstream
-  (`ready: false`) until configured.
-- **`tv/proxy.js`** — path-preserving HLS reverse proxy for live TV channels.
-  Reads `CHANNELS` from `tv/channels.js`. The front-end streams through this
-  rather than hitting the broadcaster CDN directly. Key point: it only defeats
-  geo-blocking when the server itself is hosted in the allowed region — a
-  webpage can't change the viewer's IP. Unknown channel → 404; known but
-  unconfigured (no upstream) → 503. See `README.md`.
+- **`tv/channels.js`** — the channel registry (single source of truth). Each
+  channel resolves from env, prefixed by its id upper-cased: `*_UPSTREAM`,
+  `*_MANIFEST`, `*_REFERER`, `*_ORIGIN`, `*_HOSTS` (extra allowed segment
+  hosts), `*_REWRITE` (rewrite manifest URIs through the proxy; auto-on when
+  `*_HOSTS` is set). `allowedOrigins(ch)` returns the SSRF allowlist (upstream
+  origin + extra hosts). `channelList()` exposes a browser-safe view (id, label,
+  proxied manifest URL, `ready` flag) — upstream hosts and headers are never
+  sent to the client. TRT 1 is free-to-air and ships with a working default;
+  the S Sport channels are subscription/DRM-gated and default to an empty
+  upstream (`ready: false`) until configured.
+- **`tv/proxy.js`** — HLS reverse proxy for live TV channels. Reads `CHANNELS`
+  from `tv/channels.js`. The front-end streams through this rather than hitting
+  the broadcaster CDN directly. Key point: it only defeats geo-blocking when the
+  server itself is hosted in the allowed region — a webpage can't change the
+  viewer's IP. Two manifest modes: **path-preserving** (default; relative URIs
+  streamed untouched — TRT 1) and **rewriting** (opt-in; buffers the manifest
+  and routes every allowlisted child URI back through the proxy via a
+  `?__abs=<base64url>` param — needed for absolute / cross-host streams like
+  Brightcove). Unknown channel → 404; known but unconfigured (no upstream) →
+  503. See `README.md`.
 - **`db/index.js`** — the single database boundary. Exports a `db` connection
   and `migrate()`. Uses Node's built-in **`node:sqlite`** (`DatabaseSync`) — no
   native module to compile, requires Node ≥ 22.5 (this machine runs Node 26).
@@ -77,9 +83,12 @@ curl localhost:3000/api/tracks
   If you add a script/style/media/connect source, update the CSP or it breaks.
 - `hls.js` is loaded from a CDN with an **SRI** `integrity` hash in `radio.html`
   and `tv.html`; bump the hash if you change the version.
-- `tv/proxy.js` is hardened against SSRF: it only proxies hosts in `CHANNELS`,
-  only HLS file types (`ALLOWED_FILE`), rejects `..`, and follows **same-origin
-  redirects only**. Keep these guards if you extend it.
+- `tv/proxy.js` is hardened against SSRF: it only fetches origins in the
+  channel's allowlist (`allowedOrigins` = upstream + `*_HOSTS`), only HLS file
+  types (`ALLOWED_FILE`), rejects `..`, validates the decoded `?__abs=` target's
+  protocol/origin/path, and follows **redirects within the allowlist only**.
+  Keep these guards if you extend it — every externally-reachable target (path
+  or `__abs`) must be allowlist-checked before fetch.
 - API writes validate types and cap field/key length; `express.json` is limited
   to 16 kb. Ratings have no server-side dedupe (the localStorage guard is
   client-side only) — vote-stuffing is a known, accepted prototype limitation.
