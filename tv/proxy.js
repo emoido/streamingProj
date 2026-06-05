@@ -11,11 +11,7 @@
 // and segments with RELATIVE URLs, so we can forward `/<path>` straight to the
 // upstream without rewriting manifest bodies.
 import { Readable } from 'node:stream';
-
-// channel id -> upstream base URL (override via env for each channel).
-const CHANNELS = {
-  trt1: process.env.TRT1_UPSTREAM ?? 'https://tv-trt1.medya.trt.com.tr',
-};
+import { CHANNELS } from './channels.js';
 
 // Some CDNs reject requests without a browser-like UA / Referer.
 const UPSTREAM_HEADERS = {
@@ -49,8 +45,12 @@ async function fetchSameOrigin(url, baseOrigin, opts, max = 3) {
 
 // Express middleware. Mount at `/api/tv/:channel`.
 export async function tvProxy(req, res) {
-  const base = CHANNELS[req.params.channel];
-  if (!base) return res.status(404).json({ error: 'unknown channel' });
+  const channel = CHANNELS[req.params.channel];
+  if (!channel) return res.status(404).json({ error: 'unknown channel' });
+  // Known channel but no upstream wired up yet (e.g. a subscription channel
+  // awaiting a configured SSPORT_UPSTREAM). Treat as not-yet-available.
+  const base = channel.upstream;
+  if (!base) return res.status(503).json({ error: 'channel not configured' });
 
   // `req.path` is the part after the mount point, e.g. "/master.m3u8".
   const sub = req.path.replace(/^\/+/, '');

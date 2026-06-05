@@ -32,12 +32,20 @@ curl localhost:3000/api/tracks
   (defined inline via an `express.Router`), the live-TV proxy under
   `/api/tv/:channel`, and serves `public/` as static files. Calls `migrate()`
   on startup. Port comes from `PORT` (default 3000).
-- **`tv/proxy.js`** — path-preserving HLS reverse proxy for live TV channels
-  (currently TRT 1). The front-end streams through this rather than hitting the
-  broadcaster CDN directly. Key point: it only defeats geo-blocking when the
-  server itself is hosted in the allowed region — a webpage can't change the
-  viewer's IP. Per-channel upstreams live in the `CHANNELS` map and are
-  overridable via env (e.g. `TRT1_UPSTREAM`). See `README.md`.
+- **`tv/channels.js`** — the channel registry (single source of truth). Maps
+  channel id → `{ name, upstream, manifest }`, every field env-overridable
+  (`TRT1_UPSTREAM`, `SSPORT_UPSTREAM`, `SSPORT2_UPSTREAM`, `SSPORTPLUS_UPSTREAM`,
+  plus `*_MANIFEST`). `channelList()` exposes a browser-safe view (id, label,
+  proxied manifest URL, `ready` flag) — upstream hosts are never sent to the
+  client. TRT 1 is free-to-air and ships with a working default; the S Sport
+  channels are subscription/DRM-gated and default to an empty upstream
+  (`ready: false`) until configured.
+- **`tv/proxy.js`** — path-preserving HLS reverse proxy for live TV channels.
+  Reads `CHANNELS` from `tv/channels.js`. The front-end streams through this
+  rather than hitting the broadcaster CDN directly. Key point: it only defeats
+  geo-blocking when the server itself is hosted in the allowed region — a
+  webpage can't change the viewer's IP. Unknown channel → 404; known but
+  unconfigured (no upstream) → 503. See `README.md`.
 - **`db/index.js`** — the single database boundary. Exports a `db` connection
   and `migrate()`. Uses Node's built-in **`node:sqlite`** (`DatabaseSync`) — no
   native module to compile, requires Node ≥ 22.5 (this machine runs Node 26).
@@ -48,8 +56,9 @@ curl localhost:3000/api/tracks
 - **`public/`** — static front-end, no server-side rendering. `index.html` is
   the radio/TV chooser; `radio.html` + `app.js` is the radio player (fetches
   `/api/tracks` and station metadata client-side); `tv.html` + `tv.js` is the
-  TRT 1 player (hls.js video via the `/api/tv/trt1/` proxy). `logo.svg` is the
-  custom logo; `style.css` is shared.
+  live-TV player — it fetches the channel list from `/api/tv`, renders a channel
+  switcher, and plays the selected channel (hls.js video via the
+  `/api/tv/<id>/` proxy). `logo.svg` is the custom logo; `style.css` is shared.
 
 ## Conventions
 

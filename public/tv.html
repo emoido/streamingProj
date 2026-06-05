@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Radio Calico — Live TV (TRT 1)</title>
-  <meta name="description" content="Watch TRT 1 live in HD on Radio Calico." />
+  <title>Radio Calico — Live TV</title>
+  <meta name="description" content="Watch live TV in HD on Radio Calico." />
   <link rel="icon" type="image/svg+xml" href="/logo.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -27,8 +27,10 @@
   </header>
 
   <main class="tv">
+    <nav id="channels" class="tv-channels" aria-label="Channels"></nav>
+
     <div class="tv-head">
-      <h1 class="tv-title">TRT&nbsp;1 <span class="live-badge"><span class="live-dot"></span> LIVE</span></h1>
+      <h1 class="tv-title"><span id="channel-name">Live&nbsp;TV</span> <span class="live-badge"><span class="live-dot"></span> LIVE</span></h1>
       <div class="tv-quality">
         <label for="quality">Quality</label>
         <select id="quality" aria-label="Stream quality">
@@ -40,19 +42,20 @@
     <div class="video-frame">
       <video id="video" playsinline controls poster=""></video>
       <div id="tv-overlay" class="tv-overlay">
-        <button id="tv-start" class="tv-start" aria-label="Play TRT 1">
+        <button id="tv-start" class="tv-start" aria-label="Play channel">
           <svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true">
             <path d="M8 5v14l11-7z" fill="currentColor" />
           </svg>
-          <span>Watch TRT 1</span>
+          <span id="tv-start-label">Watch live</span>
         </button>
         <p id="tv-status" class="tv-status"></p>
       </div>
     </div>
 
     <p class="tv-note">
-      Live stream courtesy of TRT. Availability may depend on your region —
-      see the README for how to route playback through an in-region proxy.
+      Live streams courtesy of their broadcasters. Availability may depend on
+      your region (and, for subscription channels, a configured source) — see
+      the README for how to route playback through an in-region proxy.
     </p>
   </main>
 

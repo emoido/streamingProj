@@ -18,7 +18,8 @@ npm run dev      # same, with auto-restart
 
 - `/` — start page; choose **Radio** or **TV**
 - `/radio.html` — lossless HLS radio player with live now-playing + ratings
-- `/tv.html` — live TV player for **TRT 1** (HD, up to 720p)
+- `/tv.html` — live TV player with a channel switcher (**TRT 1**, plus
+  **S Sport**, **S Sport 2**, **S Sport+** once configured — see below)
 
 ## Live TV & geo-restrictions (important)
 
@@ -48,7 +49,30 @@ swap endpoints without code changes:
 TRT1_UPSTREAM=https://tv-trt1.medya.trt.com.tr npm start
 ```
 
-Adding more channels later is a one-line entry in `tv/proxy.js` (`CHANNELS`).
+Channels live in one registry, `tv/channels.js`; the front-end reads the list
+from `GET /api/tv`, so adding a channel is a single entry there (no front-end
+edits). `GET /api/tv` returns each channel's id, label, and proxied manifest
+URL — upstream hosts are never exposed to the browser.
+
+### S Sport / S Sport 2 / S Sport+
+
+These are **Saran Media subscription channels**, not free-to-air like TRT 1.
+They publish no open HLS URL — playback is token/DRM-gated behind a login — so
+they ship here with **no default upstream** and appear in the UI marked "needs
+configuration" (a small amber dot). Point each at a stream you're authorised to
+use and they light up:
+
+```bash
+SSPORT_UPSTREAM=https://<host>      \
+SSPORT2_UPSTREAM=https://<host>     \
+SSPORTPLUS_UPSTREAM=https://<host>  \
+  npm start
+```
+
+Each also takes an optional `*_MANIFEST` var (default `master.m3u8`) if the
+master playlist has a different filename. The same geo-restriction reality
+applies: only an in-region (and, for these, authorised) source will actually
+play.
 
 ## Quick checks
 

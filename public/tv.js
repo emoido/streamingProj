@@ -1,18 +1,22 @@
-// Radio Calico — TV player. Streams TRT 1 (HLS) through our own server proxy
-// at /api/tv/trt1/master.m3u8 so playback is consistent regardless of the
-// CDN's CORS/edge behaviour. When the server is hosted in-region, the proxy
-// is also what makes the channel reachable from blocked locations.
-const STREAM_URL = '/api/tv/trt1/master.m3u8';
+// Radio Calico — TV player. Channels are fetched from /api/tv and streamed
+// through our own server proxy at /api/tv/<id>/<manifest>, so playback is
+// consistent regardless of each CDN's CORS/edge behaviour. When the server is
+// hosted in-region, the proxy is also what makes a channel reachable from
+// blocked locations.
 
 const $ = (id) => document.getElementById(id);
 const video = $('video');
 const overlay = $('tv-overlay');
 const startBtn = $('tv-start');
+const startLabel = $('tv-start-label');
 const statusEl = $('tv-status');
 const qualitySelect = $('quality');
+const channelsEl = $('channels');
+const channelNameEl = $('channel-name');
 
 let hls = null;
 let started = false;
+let current = null; // currently selected channel { id, name, ready, src }
 
 function setStatus(msg) {
   statusEl.textContent = msg || '';
@@ -25,10 +29,80 @@ function showOverlay() {
   overlay.classList.remove('hidden');
 }
 
+// --- Channel switching -------------------------------------------------
+async function loadChannels() {
+  let channels = [];
+  try {
+    const res = await fetch('/api/tv');
+    channels = await res.json();
+  } catch {
+    setStatus('Could not load channel list.');
+    showOverlay();
+    return;
+  }
+  renderChannelTabs(channels);
+  // Default to the first channel that has a configured upstream.
+  const first = channels.find((c) => c.ready) ?? channels[0];
+  if (first) selectChannel(first);
+}
+
+function renderChannelTabs(channels) {
+  channelsEl.innerHTML = '';
+  channels.forEach((c) => {
+    const btn = document.createElement('button');
+    btn.className = 'tv-channel';
+    btn.textContent = c.name;
+    btn.dataset.id = c.id;
+    if (!c.ready) {
+      btn.classList.add('not-ready');
+      btn.title = 'Not configured — supply an upstream URL via env to enable';
+    }
+    btn.addEventListener('click', () => selectChannel(c));
+    channelsEl.appendChild(btn);
+  });
+}
+
+function selectChannel(channel) {
+  if (current && current.id === channel.id) return;
+  current = channel;
+  channelNameEl.textContent = channel.name;
+  startLabel.textContent = `Watch ${channel.name}`;
+  startBtn.setAttribute('aria-label', `Play ${channel.name}`);
+
+  // Highlight the active tab.
+  [...channelsEl.children].forEach((b) =>
+    b.classList.toggle('active', b.dataset.id === channel.id)
+  );
+
+  // Tear down any existing playback before loading the new channel.
+  teardown();
+  qualitySelect.innerHTML = '<option value="auto">Auto</option>';
+
+  if (!channel.ready) {
+    fail(`${channel.name} isn't configured yet. See the README to point it at an authorised stream.`);
+    return;
+  }
+  showOverlay();
+  setStatus('');
+  start(); // auto-start the newly selected channel
+}
+
+function teardown() {
+  started = false;
+  if (hls) {
+    hls.destroy();
+    hls = null;
+  }
+  video.removeAttribute('src');
+  video.load();
+}
+
+// --- Playback ----------------------------------------------------------
 function start() {
-  if (started) return;
+  if (started || !current || !current.ready) return;
   started = true;
   setStatus('Connecting…');
+  const streamUrl = current.src;
 
   if (window.Hls && Hls.isSupported()) {
     hls = new Hls({
@@ -38,7 +112,7 @@ function start() {
       startLevel: -1,
       capLevelToPlayerSize: false,
     });
-    hls.loadSource(STREAM_URL);
+    hls.loadSource(streamUrl);
     hls.attachMedia(video);
 
     hls.on(Hls.Events.MANIFEST_PARSED, (_e, data) => {
@@ -55,11 +129,6 @@ function start() {
       });
     });
 
-    hls.on(Hls.Events.LEVEL_SWITCHED, (_e, data) => {
-      if (qualitySelect.value === 'auto') return;
-      // keep the dropdown in sync when ABR is off it stays put
-    });
-
     hls.on(Hls.Events.ERROR, (_e, data) => {
       if (!data.fatal) return;
       switch (data.type) {
@@ -71,13 +140,13 @@ function start() {
           hls.recoverMediaError();
           break;
         default:
-          fail('Stream unavailable. It may be geo-restricted in your region.');
+          fail('Stream unavailable. It may be geo-restricted or require a configured source.');
           break;
       }
     });
   } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
     // Safari plays HLS natively.
-    video.src = STREAM_URL;
+    video.src = streamUrl;
     video.play().then(hideOverlay).catch(() => {
       setStatus('Press play to start');
       showOverlay();
@@ -117,3 +186,5 @@ qualitySelect.addEventListener('change', () => {
 startBtn.addEventListener('click', start);
 video.addEventListener('playing', () => { hideOverlay(); setStatus(''); });
 video.addEventListener('waiting', () => setStatus('Buffering…'));
+
+loadChannels();

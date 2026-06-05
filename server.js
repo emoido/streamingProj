@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { db, migrate } from './db/index.js';
 import { tvProxy } from './tv/proxy.js';
+import { channelList } from './tv/channels.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT ?? 3000;
@@ -108,10 +109,18 @@ api.post('/ratings/:key', (req, res) => {
   res.json(row);
 });
 
+// Live TV channel list (ids, labels, proxied manifest URLs). Upstream hosts
+// are not exposed. Defined before the proxy mount so `/api/tv` is not swallowed
+// by the `/api/tv/:channel` matcher.
+api.get('/tv', (_req, res) => {
+  res.json(channelList());
+});
+
 app.use('/api', api);
 
 // --- Live TV proxy -----------------------------------------------------
-// Streams HLS channels (e.g. TRT 1) through this server. See tv/proxy.js.
+// Streams HLS channels (TRT 1, S Sport, …) through this server. See
+// tv/proxy.js and the registry in tv/channels.js.
 app.use('/api/tv/:channel', tvProxy);
 
 // --- Static front-end --------------------------------------------------
