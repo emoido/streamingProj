@@ -11,3 +11,4 @@ radiocalico.db-wal
 # Local Claude Code settings + scratch
 .claude/settings.local.json
 resume.txt
+resume.sh

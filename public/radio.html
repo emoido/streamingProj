@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Radio Calico — Lossless Radio</title>
+  <meta name="description" content="Radio Calico — crystal-clear, lossless 24-bit streaming radio." />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Open+Sans:wght@400;600&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <!-- Teal nav bar: logo + mode switch -->
+  <header class="nav">
+    <a class="brand" href="/">
+      <img src="/logo.svg" alt="Radio Calico" class="brand-logo" />
+      <span class="brand-name">Radio&nbsp;Calico</span>
+    </a>
+    <nav class="nav-links">
+      <a href="/radio.html" class="active">📻 Radio</a>
+      <a href="/tv.html">📺 TV</a>
+    </nav>
+  </header>
+
+  <main class="player">
+    <!-- Left: album art with year badge -->
+    <section class="art-col">
+      <div class="art-frame">
+        <img id="cover" class="cover" alt="Album cover" />
+        <span id="year" class="year-badge"></span>
+      </div>
+    </section>
+
+    <!-- Right: now-playing details + controls -->
+    <section class="info-col">
+      <h1 id="artist" class="artist">—</h1>
+      <h2 id="title" class="title">Connecting to the stream…</h2>
+      <p id="album" class="album"></p>
+
+      <dl class="quality">
+        <div>
+          <dt>Source quality</dt>
+          <dd id="source-quality">—</dd>
+        </div>
+        <div>
+          <dt>Stream quality</dt>
+          <dd id="stream-quality">—</dd>
+        </div>
+      </dl>
+
+      <div class="rate-row">
+        <span class="rate-label">Rate this track:</span>
+        <button id="thumb-up" class="thumb" aria-label="Thumbs up" title="I like this">
+          👍 <span id="up-count" class="count">0</span>
+        </button>
+        <button id="thumb-down" class="thumb" aria-label="Thumbs down" title="Not for me">
+          👎 <span id="down-count" class="count">0</span>
+        </button>
+      </div>
+
+      <!-- Audio player -->
+      <div class="controls">
+        <button id="play" class="play-btn" aria-label="Play">
+          <svg class="icon-play" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+            <path d="M8 5v14l11-7z" fill="currentColor" />
+          </svg>
+          <svg class="icon-pause" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" hidden>
+            <path d="M6 5h4v14H6zm8 0h4v14h-4z" fill="currentColor" />
+          </svg>
+        </button>
+
+        <span id="status" class="status">Stopped</span>
+
+        <span class="live-dot" id="live-dot" hidden></span>
+
+        <label class="volume">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4z" fill="currentColor" />
+          </svg>
+          <input id="volume" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volume" />
+        </label>
+      </div>
+
+      <audio id="audio" preload="none" crossorigin="anonymous"></audio>
+    </section>
+  </main>
+
+  <!-- Previous tracks -->
+  <section class="recent">
+    <h3 class="recent-heading">Previous tracks</h3>
+    <ul id="recent-list" class="recent-list"></ul>
+  </section>
+
+  <footer class="footer">
+    <p>Kick back and enjoy the crystal-clear audio — 24-bit lossless, ad-free.</p>
+  </footer>
+
+  <!-- hls.js for browsers without native HLS (Chrome, Firefox, Edge) -->
+  <script
+    src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"
+    integrity="sha384-9v3HcdYrO3D+OPDTjZ40RXocgE4GtXVCd3/mCS62JsM93JXgI1afJVuwjFvsu6ni"
+    crossorigin="anonymous"
+  ></script>
+  <script src="/app.js"></script>
+</body>
+</html>

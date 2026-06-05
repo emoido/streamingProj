@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Radio Calico — Live TV (TRT 1)</title>
+  <meta name="description" content="Watch TRT 1 live in HD on Radio Calico." />
+  <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Open+Sans:wght@400;600&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <header class="nav">
+    <a class="brand" href="/">
+      <img src="/logo.svg" alt="Radio Calico" class="brand-logo" />
+      <span class="brand-name">Radio&nbsp;Calico</span>
+    </a>
+    <nav class="nav-links">
+      <a href="/radio.html">📻 Radio</a>
+      <a href="/tv.html" class="active">📺 TV</a>
+    </nav>
+  </header>
+
+  <main class="tv">
+    <div class="tv-head">
+      <h1 class="tv-title">TRT&nbsp;1 <span class="live-badge"><span class="live-dot"></span> LIVE</span></h1>
+      <div class="tv-quality">
+        <label for="quality">Quality</label>
+        <select id="quality" aria-label="Stream quality">
+          <option value="auto">Auto</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="video-frame">
+      <video id="video" playsinline controls poster=""></video>
+      <div id="tv-overlay" class="tv-overlay">
+        <button id="tv-start" class="tv-start" aria-label="Play TRT 1">
+          <svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true">
+            <path d="M8 5v14l11-7z" fill="currentColor" />
+          </svg>
+          <span>Watch TRT 1</span>
+        </button>
+        <p id="tv-status" class="tv-status"></p>
+      </div>
+    </div>
+
+    <p class="tv-note">
+      Live stream courtesy of TRT. Availability may depend on your region —
+      see the README for how to route playback through an in-region proxy.
+    </p>
+  </main>
+
+  <footer class="footer">
+    <p>Live TV on Radio Calico.</p>
+  </footer>
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"
+    integrity="sha384-9v3HcdYrO3D+OPDTjZ40RXocgE4GtXVCd3/mCS62JsM93JXgI1afJVuwjFvsu6ni"
+    crossorigin="anonymous"
+  ></script>
+  <script src="/tv.js"></script>
+</body>
+</html>

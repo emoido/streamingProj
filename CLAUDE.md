@@ -5,7 +5,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this is
 
 Radio Calico — a local prototype web stack for a website being built. Express
-serves a static front-end plus a small JSON API backed by SQLite.
+serves a static front-end (a lossless **radio** player and a live **TV** player)
+plus a small JSON API backed by SQLite. The brand name/logo are placeholders and
+will change.
 
 ## Commands
 
@@ -27,8 +29,15 @@ curl localhost:3000/api/tracks
 ## Architecture
 
 - **`server.js`** — Express entry point. Mounts the JSON API under `/api`
-  (defined inline via an `express.Router`) and serves `public/` as static
-  files. Calls `migrate()` on startup. Port comes from `PORT` (default 3000).
+  (defined inline via an `express.Router`), the live-TV proxy under
+  `/api/tv/:channel`, and serves `public/` as static files. Calls `migrate()`
+  on startup. Port comes from `PORT` (default 3000).
+- **`tv/proxy.js`** — path-preserving HLS reverse proxy for live TV channels
+  (currently TRT 1). The front-end streams through this rather than hitting the
+  broadcaster CDN directly. Key point: it only defeats geo-blocking when the
+  server itself is hosted in the allowed region — a webpage can't change the
+  viewer's IP. Per-channel upstreams live in the `CHANNELS` map and are
+  overridable via env (e.g. `TRT1_UPSTREAM`). See `README.md`.
 - **`db/index.js`** — the single database boundary. Exports a `db` connection
   and `migrate()`. Uses Node's built-in **`node:sqlite`** (`DatabaseSync`) — no
   native module to compile, requires Node ≥ 22.5 (this machine runs Node 26).
@@ -36,8 +45,11 @@ curl localhost:3000/api/tracks
   handlers in `server.js` should not need to change.
 - **`db/seed.js`** — standalone script that runs `migrate()` then replaces all
   `tracks` rows with sample data.
-- **`public/`** — static front-end (`index.html`, `style.css`, `app.js`). The
-  page fetches `/api/tracks` client-side; there is no server-side rendering.
+- **`public/`** — static front-end, no server-side rendering. `index.html` is
+  the radio/TV chooser; `radio.html` + `app.js` is the radio player (fetches
+  `/api/tracks` and station metadata client-side); `tv.html` + `tv.js` is the
+  TRT 1 player (hls.js video via the `/api/tv/trt1/` proxy). `logo.svg` is the
+  custom logo; `style.css` is shared.
 
 ## Conventions
 
@@ -48,3 +60,17 @@ curl localhost:3000/api/tracks
   now; introduce real migrations once the schema stabilizes.
 - The SQLite files (`radiocalico.db`, `-wal`, `-shm`) are gitignored and
   regenerable via `npm run seed` — never commit them.
+
+## Security posture (don't regress)
+
+- `server.js` sets a hand-rolled CSP + security headers tuned to exactly what
+  the app loads (self, jsdelivr for hls.js, Google Fonts, the CloudFront host).
+  If you add a script/style/media/connect source, update the CSP or it breaks.
+- `hls.js` is loaded from a CDN with an **SRI** `integrity` hash in `radio.html`
+  and `tv.html`; bump the hash if you change the version.
+- `tv/proxy.js` is hardened against SSRF: it only proxies hosts in `CHANNELS`,
+  only HLS file types (`ALLOWED_FILE`), rejects `..`, and follows **same-origin
+  redirects only**. Keep these guards if you extend it.
+- API writes validate types and cap field/key length; `express.json` is limited
+  to 16 kb. Ratings have no server-side dedupe (the localStorage guard is
+  client-side only) — vote-stuffing is a known, accepted prototype limitation.

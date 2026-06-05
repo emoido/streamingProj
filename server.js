@@ -4,6 +4,7 @@ import express from 'express';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { db, migrate } from './db/index.js';
+import { tvProxy } from './tv/proxy.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT ?? 3000;
@@ -11,7 +12,36 @@ const PORT = process.env.PORT ?? 3000;
 migrate();
 
 const app = express();
-app.use(express.json());
+
+// --- Security headers --------------------------------------------------
+// Hand-rolled (no helmet dependency) and scoped to what this app actually
+// loads: self, the hls.js CDN, Google Fonts, and the station's CloudFront
+// host (HLS + metadata + cover art). hls.js uses blob: workers and MSE.
+const CSP = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'self'",
+  "script-src 'self' https://cdn.jsdelivr.net",
+  "style-src 'self' https://fonts.googleapis.com",
+  "font-src https://fonts.gstatic.com",
+  "img-src 'self' https://d3d4yli4hf5bmh.cloudfront.net data:",
+  "media-src 'self' blob: https://d3d4yli4hf5bmh.cloudfront.net",
+  "connect-src 'self' https://d3d4yli4hf5bmh.cloudfront.net",
+  "worker-src blob:",
+].join('; ');
+
+app.use((_req, res, next) => {
+  res.set('Content-Security-Policy', CSP);
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('X-Frame-Options', 'SAMEORIGIN');
+  res.set('Referrer-Policy', 'no-referrer');
+  res.set('Permissions-Policy', 'geolocation=(), camera=(), microphone=()');
+  next();
+});
+
+// Small JSON bodies only (votes, track logging).
+app.use(express.json({ limit: '16kb' }));
 
 // --- API ---------------------------------------------------------------
 const api = express.Router();
@@ -28,11 +58,18 @@ api.get('/tracks', (_req, res) => {
   res.json(rows);
 });
 
+// Reject absurdly long free-text fields (storage abuse / DoS surface).
+const MAX_FIELD = 300;
+const tooLong = (...vals) => vals.some((v) => typeof v === 'string' && v.length > MAX_FIELD);
+
 // Log a track as played.
 api.post('/tracks', (req, res) => {
   const { title, artist, album } = req.body ?? {};
   if (!title || !artist) {
     return res.status(400).json({ error: 'title and artist are required' });
+  }
+  if (tooLong(title, artist, album)) {
+    return res.status(400).json({ error: `fields must be <= ${MAX_FIELD} chars` });
   }
   const info = db
     .prepare('INSERT INTO tracks (title, artist, album) VALUES (?, ?, ?)')
@@ -57,6 +94,9 @@ api.post('/ratings/:key', (req, res) => {
   if (value !== 1 && value !== -1) {
     return res.status(400).json({ error: 'value must be 1 or -1' });
   }
+  if (req.params.key.length > MAX_FIELD) {
+    return res.status(400).json({ error: 'key too long' });
+  }
   const column = value === 1 ? 'up' : 'down';
   db.prepare(
     `INSERT INTO song_ratings (song_key, ${column}) VALUES (?, 1)
@@ -69,6 +109,10 @@ api.post('/ratings/:key', (req, res) => {
 });
 
 app.use('/api', api);
+
+// --- Live TV proxy -----------------------------------------------------
+// Streams HLS channels (e.g. TRT 1) through this server. See tv/proxy.js.
+app.use('/api/tv/:channel', tvProxy);
 
 // --- Static front-end --------------------------------------------------
 app.use(express.static(join(__dirname, 'public')));
