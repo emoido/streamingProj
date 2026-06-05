@@ -25,10 +25,11 @@ const TRUTHY = new Set(['1', 'true', 'yes', 'on']);
 function channel(id, name, defaults = {}) {
   const P = id.toUpperCase();
   const e = process.env;
-  const allowHosts = (e[`${P}_HOSTS`] ?? '')
+  const envHosts = (e[`${P}_HOSTS`] ?? '')
     .split(',')
     .map((h) => h.trim())
     .filter(Boolean);
+  const allowHosts = envHosts.length ? envHosts : defaults.hosts ?? [];
   return {
     name,
     upstream: e[`${P}_UPSTREAM`] ?? defaults.upstream ?? '',
@@ -43,6 +44,15 @@ function channel(id, name, defaults = {}) {
 
 export const CHANNELS = {
   trt1: channel('trt1', 'TRT 1', { upstream: 'https://tv-trt1.medya.trt.com.tr' }),
+  // Bloomberg HT — free-to-air, globally reachable, no token/DRM. The master
+  // lives on ciner.daioncdn.net but segments are served from a second host
+  // (ciner-live.daioncdn.net), so it ships with that host allowlisted, which
+  // auto-enables manifest rewriting.
+  bloomberght: channel('bloomberght', 'Bloomberg HT', {
+    upstream: 'https://ciner.daioncdn.net',
+    manifest: 'bloomberght/bloomberght.m3u8',
+    hosts: ['ciner-live.daioncdn.net'],
+  }),
   ssport: channel('ssport', 'S Sport'),
   ssport2: channel('ssport2', 'S Sport 2'),
   ssportplus: channel('ssportplus', 'S Sport+'),

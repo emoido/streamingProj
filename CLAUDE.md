@@ -39,9 +39,11 @@ curl localhost:3000/api/tracks
   `*_HOSTS` is set). `allowedOrigins(ch)` returns the SSRF allowlist (upstream
   origin + extra hosts). `channelList()` exposes a browser-safe view (id, label,
   proxied manifest URL, `ready` flag) — upstream hosts and headers are never
-  sent to the client. TRT 1 is free-to-air and ships with a working default;
-  the S Sport channels are subscription/DRM-gated and default to an empty
-  upstream (`ready: false`) until configured.
+  sent to the client. TRT 1 and Bloomberg HT are free-to-air and ship with
+  working defaults (Bloomberg HT also defaults a segment host into the
+  allowlist, exercising the rewrite path); the S Sport channels are
+  subscription/DRM-gated and default to an empty upstream (`ready: false`)
+  until configured.
 - **`tv/proxy.js`** — HLS reverse proxy for live TV channels. Reads `CHANNELS`
   from `tv/channels.js`. The front-end streams through this rather than hitting
   the broadcaster CDN directly. Key point: it only defeats geo-blocking when the

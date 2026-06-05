@@ -1,7 +1,8 @@
 # Radio Calico
 
 A local prototype web stack: an Express server serving a static front-end with
-a **lossless radio** player and a **live TV** player (TRT 1), backed by SQLite.
+a **lossless radio** player and a **live TV** player (TRT 1, Bloomberg HT, and
+configurable subscription channels), backed by SQLite.
 
 > Logo and name are placeholders and will change.
 
@@ -18,8 +19,9 @@ npm run dev      # same, with auto-restart
 
 - `/` — start page; choose **Radio** or **TV**
 - `/radio.html` — lossless HLS radio player with live now-playing + ratings
-- `/tv.html` — live TV player with a channel switcher (**TRT 1**, plus
-  **S Sport**, **S Sport 2**, **S Sport+** once configured — see below)
+- `/tv.html` — live TV player with a channel switcher. Free-to-air channels
+  (**TRT 1**, **Bloomberg HT**) play out of the box; the subscription channels
+  (**S Sport**, **S Sport 2**, **S Sport+**) need configuring (see below)
 
 ## Live TV & geo-restrictions (important)
 
@@ -53,6 +55,15 @@ Channels live in one registry, `tv/channels.js`; the front-end reads the list
 from `GET /api/tv`, so adding a channel is a single entry there (no front-end
 edits). `GET /api/tv` returns each channel's id, label, and proxied manifest
 URL — upstream hosts are never exposed to the browser.
+
+### Bloomberg HT (free-to-air, works out of the box)
+
+A second free-to-air channel and a real example of the multi-host/rewrite
+path: its master playlist is on `ciner.daioncdn.net` but segments are served
+from `ciner-live.daioncdn.net`, so the channel ships with that segment host
+allowlisted (`hosts: ['ciner-live.daioncdn.net']`), which auto-enables manifest
+rewriting. No token or DRM, and the endpoint is globally reachable, so it plays
+without any env configuration.
 
 ### S Sport / S Sport 2 / S Sport+
 
