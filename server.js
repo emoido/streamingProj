@@ -43,6 +43,31 @@ api.post('/tracks', (req, res) => {
   res.status(201).json(created);
 });
 
+// --- Ratings ---------------------------------------------------------
+// Thumbs up/down for the currently playing song, keyed by "artist - title".
+api.get('/ratings/:key', (req, res) => {
+  const row = db
+    .prepare('SELECT up, down FROM song_ratings WHERE song_key = ?')
+    .get(req.params.key);
+  res.json(row ?? { up: 0, down: 0 });
+});
+
+api.post('/ratings/:key', (req, res) => {
+  const { value } = req.body ?? {};
+  if (value !== 1 && value !== -1) {
+    return res.status(400).json({ error: 'value must be 1 or -1' });
+  }
+  const column = value === 1 ? 'up' : 'down';
+  db.prepare(
+    `INSERT INTO song_ratings (song_key, ${column}) VALUES (?, 1)
+     ON CONFLICT(song_key) DO UPDATE SET ${column} = ${column} + 1`
+  ).run(req.params.key);
+  const row = db
+    .prepare('SELECT up, down FROM song_ratings WHERE song_key = ?')
+    .get(req.params.key);
+  res.json(row);
+});
+
 app.use('/api', api);
 
 // --- Static front-end --------------------------------------------------

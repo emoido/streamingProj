@@ -27,4 +27,15 @@ export function migrate() {
       played_at  TEXT    NOT NULL DEFAULT (datetime('now'))
     );
   `);
+
+  // Aggregate thumbs up/down per song. `song_key` is a stable
+  // "artist - title" identifier supplied by the client; one counter row
+  // per song. Per-listener de-duplication is handled client-side.
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS song_ratings (
+      song_key TEXT PRIMARY KEY,
+      up       INTEGER NOT NULL DEFAULT 0,
+      down     INTEGER NOT NULL DEFAULT 0
+    );
+  `);
 }
