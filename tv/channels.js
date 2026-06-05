@@ -53,6 +53,15 @@ export const CHANNELS = {
     manifest: 'bloomberght/bloomberght.m3u8',
     hosts: ['ciner-live.daioncdn.net'],
   }),
+  // NOW TV — free-to-air national entertainment channel (ex-Fox TV Türkiye).
+  // Served from EkoCDN (ercdn.net); master + variants + segments are all
+  // relative, same-host URIs, so this is path-preserving like TRT 1 (no host
+  // allowlist / rewrite needed). The upstream host and manifest path look
+  // token-ish and may rotate; override NOW_UPSTREAM / NOW_MANIFEST if it drifts.
+  now: channel('now', 'NOW TV', {
+    upstream: 'https://uycyyuuzyh.turknet.ercdn.net',
+    manifest: 'nphindgytw/nowtv/nowtv.m3u8',
+  }),
   ssport: channel('ssport', 'S Sport'),
   ssport2: channel('ssport2', 'S Sport 2'),
   ssportplus: channel('ssportplus', 'S Sport+'),

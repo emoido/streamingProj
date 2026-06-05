@@ -1,8 +1,8 @@
 # Radio Calico
 
 A local prototype web stack: an Express server serving a static front-end with
-a **lossless radio** player and a **live TV** player (TRT 1, Bloomberg HT, and
-configurable subscription channels), backed by SQLite.
+a **lossless radio** player and a **live TV** player (TRT 1, Bloomberg HT,
+NOW TV, and configurable subscription channels), backed by SQLite.
 
 > Logo and name are placeholders and will change.
 
@@ -20,7 +20,7 @@ npm run dev      # same, with auto-restart
 - `/` — start page; choose **Radio** or **TV**
 - `/radio.html` — lossless HLS radio player with live now-playing + ratings
 - `/tv.html` — live TV player with a channel switcher. Free-to-air channels
-  (**TRT 1**, **Bloomberg HT**) play out of the box; the subscription channels
+  (**TRT 1**, **Bloomberg HT**, **NOW TV**) play out of the box; the subscription channels
   (**S Sport**, **S Sport 2**, **S Sport+**) need configuring (see below)
 
 ## Live TV & geo-restrictions (important)
@@ -64,6 +64,20 @@ from `ciner-live.daioncdn.net`, so the channel ships with that segment host
 allowlisted (`hosts: ['ciner-live.daioncdn.net']`), which auto-enables manifest
 rewriting. No token or DRM, and the endpoint is globally reachable, so it plays
 without any env configuration.
+
+### NOW TV (free-to-air, works out of the box)
+
+NOW TV (the national entertainment channel formerly known as Fox TV Türkiye) is
+free-to-air with no token or DRM. It's served from EkoCDN (`ercdn.net`) and —
+unlike Bloomberg HT — its master, variant playlists, and segments are all
+relative, same-host URIs, so it uses the cheap **path-preserving** mode like
+TRT 1 (no host allowlist or manifest rewriting). The default upstream host and
+manifest path look session-/token-derived and may rotate over time; if playback
+stops, point it at a fresh endpoint without code changes:
+
+```bash
+NOW_UPSTREAM=https://<host> NOW_MANIFEST=<path>/nowtv.m3u8 npm start
+```
 
 ### S Sport / S Sport 2 / S Sport+
 
