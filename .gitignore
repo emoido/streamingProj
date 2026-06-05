@@ -1,0 +1,13 @@
+node_modules/
+
+# SQLite database files (regenerated locally via `npm run seed`)
+radiocalico.db
+radiocalico.db-shm
+radiocalico.db-wal
+
+# Environment overrides
+.env
+
+# Local Claude Code settings + scratch
+.claude/settings.local.json
+resume.txt
