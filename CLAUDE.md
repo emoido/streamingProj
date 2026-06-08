@@ -12,7 +12,7 @@ will change.
 ## Commands
 
 ```bash
-npm install      # install dependencies (Express only)
+npm install      # install dependencies (Express, undici, fetch-socks)
 npm run seed     # reset + populate radiocalico.db with sample tracks
 npm start        # run the server at http://localhost:3000
 npm run dev      # same, with --watch auto-restart on file changes
@@ -36,7 +36,8 @@ curl localhost:3000/api/tracks
   channel resolves from env, prefixed by its id upper-cased: `*_UPSTREAM`,
   `*_MANIFEST`, `*_REFERER`, `*_ORIGIN`, `*_HOSTS` (extra allowed segment
   hosts), `*_REWRITE` (rewrite manifest URIs through the proxy; auto-on when
-  `*_HOSTS` is set). `allowedOrigins(ch)` returns the SSRF allowlist (upstream
+  `*_HOSTS` is set), `*_PROXY` / `TV_PROXY` (outbound HTTP/SOCKS proxy for
+  upstream CDN fetches). `allowedOrigins(ch)` returns the SSRF allowlist (upstream
   origin + extra hosts). `channelList()` exposes a browser-safe view (id, label,
   proxied manifest URL, `ready` flag) — upstream hosts and headers are never
   sent to the client. TRT 1 and Bloomberg HT are free-to-air and ship with
@@ -44,10 +45,13 @@ curl localhost:3000/api/tracks
   allowlist, exercising the rewrite path); the S Sport channels are
   subscription/DRM-gated and default to an empty upstream (`ready: false`)
   until configured.
+- **`tv/upstream-fetch.js`** — outbound `fetch` wrapper; optional per-channel
+  HTTP/SOCKS dispatcher (`*_PROXY` / `TV_PROXY`) for geo-blocked upstreams.
 - **`tv/proxy.js`** — HLS reverse proxy for live TV channels. Reads `CHANNELS`
   from `tv/channels.js`. The front-end streams through this rather than hitting
-  the broadcaster CDN directly. Key point: it only defeats geo-blocking when the
-  server itself is hosted in the allowed region — a webpage can't change the
+  the broadcaster CDN directly. Key point: it only defeats geo-blocking when
+  upstream fetches egress from the allowed region (host the app there, or set
+  `*_PROXY`) — a webpage can't change the
   viewer's IP. Two manifest modes: **path-preserving** (default; relative URIs
   streamed untouched — TRT 1) and **rewriting** (opt-in; buffers the manifest
   and routes every allowlisted child URI back through the proxy via a

@@ -13,6 +13,9 @@
 //   rewrite    - <ID>_REWRITE   rewrite manifest bodies so child URIs route
 //                               back through the proxy (auto-on when allowHosts
 //                               is set; needed for absolute / cross-host URLs)
+//   proxy      - <ID>_PROXY     outbound HTTP/SOCKS proxy for upstream CDN
+//                               fetches (http://, https://, socks5://,
+//                               socks5h://). Falls back to TV_PROXY when unset.
 //
 // NOTE ON THE S SPORT CHANNELS: unlike TRT 1 (free-to-air public broadcaster),
 // S Sport / S Sport 2 / S Sport+ are Saran Media's *subscription* channels.
@@ -30,6 +33,8 @@ function channel(id, name, defaults = {}) {
     .map((h) => h.trim())
     .filter(Boolean);
   const allowHosts = envHosts.length ? envHosts : defaults.hosts ?? [];
+  const proxy =
+    e[`${P}_PROXY`] ?? defaults.proxy ?? e.TV_PROXY ?? '';
   return {
     name,
     upstream: e[`${P}_UPSTREAM`] ?? defaults.upstream ?? '',
@@ -37,6 +42,7 @@ function channel(id, name, defaults = {}) {
     referer: e[`${P}_REFERER`] ?? defaults.referer ?? '',
     origin: e[`${P}_ORIGIN`] ?? defaults.origin ?? '',
     allowHosts,
+    proxy,
     rewrite:
       TRUTHY.has((e[`${P}_REWRITE`] ?? '').toLowerCase()) || allowHosts.length > 0,
   };

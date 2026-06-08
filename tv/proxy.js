@@ -5,7 +5,9 @@
 // through this server means the *server's* IP is what the CDN sees — so when
 // this app is hosted in-region (e.g. a Turkey-based host for TRT), the channel
 // becomes reachable for every visitor. Hosted locally it still helps by giving
-// the player a single, CORS-stable origin.
+// the player a single, CORS-stable origin. Per-channel outbound proxies
+// (<ID>_PROXY / TV_PROXY) let upstream fetches egress via another region while
+// the app runs on your machine.
 //
 // Two manifest-handling modes:
 //  - Path-preserving (default): HLS manifests reference children with RELATIVE
@@ -18,6 +20,7 @@
 //    the browser, defeating the proxy.
 import { Readable } from 'node:stream';
 import { CHANNELS, allowedOrigins } from './channels.js';
+import { proxyDispatcher, upstreamFetch } from './upstream-fetch.js';
 
 // Some CDNs reject requests without a browser-like UA / Referer.
 const BASE_HEADERS = {
@@ -37,7 +40,7 @@ const ALLOWED_FILE = /\.(m3u8|ts|aac|mp4|m4s|key)(\?|$)/i;
 async function fetchAllowed(url, allowed, opts, max = 3) {
   let current = url;
   for (let hop = 0; hop <= max; hop++) {
-    const res = await fetch(current, { ...opts, redirect: 'manual' });
+    const res = await upstreamFetch(current, { ...opts, redirect: 'manual' });
     const isRedirect = res.status >= 300 && res.status < 400 && res.headers.has('location');
     if (!isRedirect) return res;
     const next = new URL(res.headers.get('location'), current);
@@ -133,7 +136,12 @@ export async function tvProxy(req, res) {
 
   let upstream;
   try {
-    upstream = await fetchAllowed(target, allowed, { headers, signal: controller.signal });
+    const dispatcher = proxyDispatcher(channel.proxy);
+    upstream = await fetchAllowed(target, allowed, {
+      headers,
+      signal: controller.signal,
+      dispatcher,
+    });
   } catch (err) {
     clearTimeout(connectTimer);
     if (controller.signal.aborted && res.writableEnded) return; // client left

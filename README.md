@@ -95,7 +95,10 @@ SSPORTPLUS_UPSTREAM=https://<host>  \
 ```
 
 The same geo-restriction reality applies: only an in-region (and, for these,
-authorised) source will actually play.
+authorised) source will actually play. If you run the app locally outside
+Turkey, route upstream fetches through a Turkey egress proxy (see **Outbound
+proxy** below) — the browser still talks to `localhost`, but manifest/segment
+requests to the CDN leave via the proxy.
 
 #### Per-channel tuning (env)
 
@@ -111,6 +114,8 @@ URL. Every channel reads these, prefixed by its id upper-cased (`SSPORT_*`,
 | `*_ORIGIN`     | Sent as the `Origin` request header upstream.                          |
 | `*_HOSTS`      | Comma-separated **extra** hostnames the proxy may fetch from — for segments served by a different CDN host than the manifest. |
 | `*_REWRITE`    | `1` to rewrite manifest bodies so child URIs route back through the proxy. Needed when a stream uses **absolute** or **cross-host** URLs. Auto-on whenever `*_HOSTS` is set. |
+| `*_PROXY`      | Outbound proxy for upstream CDN fetches (`http://`, `https://`, `socks5://`, `socks5h://`). Falls back to `TV_PROXY` when unset. |
+| `TV_PROXY`     | Default outbound proxy for every channel that does not set its own `*_PROXY`. |
 
 Example for a tokenised, multi-host stream:
 
@@ -135,6 +140,34 @@ How the proxy handles manifests:
 
 Still out of scope: **DRM** (Widevine/FairPlay). If the stream is
 license-encrypted rather than just token-gated, this proxy won't decrypt it.
+
+#### Outbound proxy (watch geo-blocked channels from abroad)
+
+When the app runs on your local machine, upstream HLS fetches use your PC's IP
+unless you set an outbound proxy. Only **server-side** CDN requests go through
+the proxy — your browser still opens `http://localhost:3000`.
+
+Supported proxy URLs:
+
+- `http://host:port` / `https://host:port` — HTTP CONNECT
+- `socks5://host:port` / `socks5h://host:port` — SOCKS5 (`socks5h` resolves
+  DNS on the proxy; prefer this for geo-blocked CDNs)
+
+Example — S Sport from Germany via a Turkey SOCKS proxy, with a captured m3u8:
+
+```bash
+SSPORT_UPSTREAM=https://<cdn-host> \
+SSPORT_MANIFEST=<path>/master.m3u8?token=<…> \
+SSPORT_REFERER=https://www.ssportplus.com/ \
+SSPORT_ORIGIN=https://www.ssportplus.com \
+SSPORT_PROXY=socks5h://user:pass@tr-proxy.example:1080 \
+  npm start
+```
+
+Set `TV_PROXY=…` instead of `SSPORT_PROXY` to apply one proxy to all channels.
+Manifest tokens still expire — recapture from ssportplus.com (through the same
+Turkey proxy in a browser, or while a capture VPN is up) and update
+`SSPORT_MANIFEST` when playback stops.
 
 ## Quick checks
 
